@@ -1,0 +1,50 @@
+name: Build
+on:
+  push:
+    branches-ignore:
+      - 'no-ci-**'
+      - 'skip-ci-**'
+  pull_request:
+
+env:
+  CMAKE_VERSION: 3.21.x
+  # paths
+  ci_workspace_dir: ${{ github.workspace }}
+  ci_source_dir: ${{ github.workspace }}/source-code
+  ci_build_script: ./source-code/script/ci_build.sh
+  ci_build_dir: ${{ github.workspace }}/cmake-build
+  ci_sdk_dir: ${{ github.workspace }}/SDK
+
+jobs:
+  Windows:
+    runs-on: windows-2022
+
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ${{ env.ci_source_dir }}
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '${{ env.CMAKE_VERSION }}'
+
+      - name: Generate
+        shell: bash
+        run: cmake -G 'Visual Studio 17 2022' -DCMAKE_BUILD_TYPE=RelWithDebInfo -B "${{env.ci_build_dir}}" -S "${{env.ci_source_dir}}"
+
+      - name: Build
+        shell: bash
+        run: cmake --build "${{env.ci_build_dir}}" --config RelWithDebInfo
+
+      - name: Test
+        shell: bash
+        run: |
+          cd "${{env.ci_build_dir}}/RelWithDebInfo"
+          ls
+          ./a.exe
